@@ -9,6 +9,7 @@ import seaborn as sns
 import qstrader.statistics.performance as perf
 from qstrader.statistics.statistics import Statistics
 from qstrader import settings
+from qstrader import __version__ as ver
 
 
 class TearsheetStatisticsMulti(Statistics):
@@ -27,6 +28,12 @@ class TearsheetStatisticsMulti(Statistics):
         self.benchmark_equity = benchmark_equity
         self.title = title
         self.periods = periods
+        self.__version__ = ver
+        self.name = "<class> TearsheetStatisticsMulti"
+        self.colors = ['green','red','blue','black']
+
+    def __str__(self):
+        return f"{self.name}({self.__version__})"
 
     def get_results(self, equity_df):
         """
@@ -179,10 +186,14 @@ class TearsheetStatisticsMulti(Statistics):
 
         return ax
 
-    def _plot_txt_curve(self, strat_stats, bench_stats=None, ax=None, **kwargs):
+    def _plot_txt_curve(self, strat_stats_list, bench_stats=None, ax=None, **kwargs):
         """
         Outputs the statistics for the equity curve.
         """
+        if not type(strat_stats_list) is list:
+                print(self.name + " requires strategies as a list")
+                raise TypeError("Only lists are allowed")
+        
         def format_perc(x, pos):
             return '%.0f%%' % x
 
@@ -193,8 +204,7 @@ class TearsheetStatisticsMulti(Statistics):
         ax.yaxis.set_major_formatter(FuncFormatter(y_axis_formatter))
 
 
-        #ax.set_title('Equity Curve', fontweight='bold')
-
+        ax.set_title('Multi Curve box', fontweight='bold')
         ax.grid(False)
         ax.spines['top'].set_linewidth(2.0)
         ax.spines['bottom'].set_linewidth(2.0)
@@ -205,43 +215,56 @@ class TearsheetStatisticsMulti(Statistics):
         ax.set_ylabel('himi')
         ax.set_xlabel('lou')
 
+        #BUG extend top and bottom lines
+        linelen = 10 * len(strat_stats_list)
         ax.axis([0, 10, 0, 10])
-    
 
+        
+        y_txtlocation = 6.9
+        x_txtlocation = 5.00
+        coloridx = 0
+        colors = self.colors
         #text box for returns -Labels-
-        ax.text(7.50, 8.2, 'Strategy', fontweight='bold', horizontalalignment='right', fontsize=8, color='green')
-        ax.text(0.25, 6.9, 'Total Return', fontsize=8)
-        ax.text(0.25, 5.9, 'CAGR', fontsize=8)
-        ax.text(0.25, 4.9, 'Sharpe Ratio', fontsize=8)
-        ax.text(0.25, 3.9, 'Sortino Ratio', fontsize=8)
-        ax.text(0.25, 2.9, 'Annual Volatility', fontsize=8)
-        ax.text(0.25, 1.9, 'Max Daily Drawdown', fontsize=8)
-        ax.text(0.25, 0.9, 'Max Drawdown Duration (Days)', fontsize=8)
-
+        ax.text(7.50, 8.2, 'Strategy', fontweight='bold', horizontalalignment='right', fontsize=8, color=colors[coloridx])
+        ax.text(0.25, y_txtlocation, 'Total Return', fontsize=8)
+        ax.text(0.25, y_txtlocation-1, 'CAGR', fontsize=8)
+        ax.text(0.25, y_txtlocation-2, 'Sharpe Ratio', fontsize=8)
+        ax.text(0.25, y_txtlocation-3, 'Sortino Ratio', fontsize=8)
+        ax.text(0.25, y_txtlocation-4, 'Annual Volatility', fontsize=8)
+        ax.text(0.25, y_txtlocation-5, 'Max Daily Drawdown', fontsize=8)
+        ax.text(0.25, y_txtlocation-6, 'Max Drawdown Duration (Days)', fontsize=8)
+        
+        
         #calc strategy values for returns box
-        returns = strat_stats["returns"]
-        cum_returns = strat_stats["cum_returns"]
-        tot_ret = cum_returns.iloc[-1] - 1.0
-        cagr = perf.create_cagr(cum_returns, self.periods)
-        sharpe = perf.create_sharpe_ratio(returns, self.periods)
-        sortino = perf.create_sortino_ratio(returns, self.periods)
-        dd, dd_max, dd_dur = perf.create_drawdowns(cum_returns)
+        for strat_stats in strat_stats_list:
 
-        #total return val
-        ax.text(7.50, 6.9, '{:.0%}'.format(tot_ret), fontweight='bold', horizontalalignment='right', fontsize=8)
-        #CAGR val
-        ax.text(7.50, 5.9, '{:.2%}'.format(cagr), fontweight='bold', horizontalalignment='right', fontsize=8)
-        #SHARP
-        ax.text(7.50, 4.9, '{:.2f}'.format(sharpe), fontweight='bold', horizontalalignment='right', fontsize=8)
-        #sortno
-        ax.text(7.50, 3.9, '{:.2f}'.format(sortino), fontweight='bold', horizontalalignment='right', fontsize=8)
-        #annual Vol
-        ax.text(7.50, 2.9, '{:.2%}'.format(returns.std() * np.sqrt(252)), fontweight='bold', horizontalalignment='right', fontsize=8)
-        #max drawdown
-        ax.text(7.50, 1.9, '{:.2%}'.format(dd_max), color='red', fontweight='bold', horizontalalignment='right', fontsize=8)
-        #draw down duration
-        ax.text(7.50, 0.9, '{:.0f}'.format(dd_dur), fontweight='bold', horizontalalignment='right', fontsize=8)
+            x_txtlocation += 2.50
+            returns = strat_stats["returns"]
+            cum_returns = strat_stats["cum_returns"]
+            tot_ret = cum_returns.iloc[-1] - 1.0
+            cagr = perf.create_cagr(cum_returns, self.periods)
+            sharpe = perf.create_sharpe_ratio(returns, self.periods)
+            sortino = perf.create_sortino_ratio(returns, self.periods)
+            dd, dd_max, dd_dur = perf.create_drawdowns(cum_returns)
 
+            #total return val
+            ax.text(x_txtlocation, y_txtlocation, '{:.0%}'.format(tot_ret),color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            #CAGR val
+            ax.text(x_txtlocation, y_txtlocation-1, '{:.2%}'.format(cagr),color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            #SHARP
+            ax.text(x_txtlocation, y_txtlocation-2, '{:.2f}'.format(sharpe),color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            #sortno
+            ax.text(x_txtlocation, y_txtlocation-3, '{:.2f}'.format(sortino),color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            #annual Vol
+            ax.text(x_txtlocation, y_txtlocation-4, '{:.2%}'.format(returns.std() * np.sqrt(252)),color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            #max drawdown
+            ax.text(x_txtlocation, y_txtlocation-5, '{:.2%}'.format(dd_max), color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            #draw down duration
+            ax.text(x_txtlocation, y_txtlocation-6, '{:.0f}'.format(dd_dur), color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+        #end for loop
+        x_txtlocation += 2.50
+        coloridx += 1
+        
         if bench_stats is not None:
             #calculate values for benchmark backtest if provided
             bench_returns = bench_stats["returns"]
@@ -252,14 +275,14 @@ class TearsheetStatisticsMulti(Statistics):
             bench_sortino = perf.create_sortino_ratio(bench_returns, self.periods)
             _, bench_dd_max, bench_dd_dur = perf.create_drawdowns(bench_cum_returns)
             #Display benchmark title and values
-            ax.text(10.0, 8.2, 'Benchmark', fontweight='bold', horizontalalignment='right', fontsize=8, color='gray')
-            ax.text(10.0, 6.9, '{:.0%}'.format(bench_tot_ret), fontweight='bold', horizontalalignment='right', fontsize=8)
-            ax.text(10.0, 5.9, '{:.2%}'.format(bench_cagr), fontweight='bold', horizontalalignment='right', fontsize=8)
-            ax.text(10.0, 4.9, '{:.2f}'.format(bench_sharpe), fontweight='bold', horizontalalignment='right', fontsize=8)
-            ax.text(10.0, 3.9, '{:.2f}'.format(bench_sortino), fontweight='bold', horizontalalignment='right', fontsize=8)
-            ax.text(10.0, 2.9, '{:.2%}'.format(bench_returns.std() * np.sqrt(252)), fontweight='bold', horizontalalignment='right', fontsize=8)
-            ax.text(10.0, 1.9, '{:.2%}'.format(bench_dd_max), color='red', fontweight='bold', horizontalalignment='right', fontsize=8)
-            ax.text(10.0, 0.9, '{:.0f}'.format(bench_dd_dur), fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, 8.2, 'Benchmark', color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, y_txtlocation, '{:.0%}'.format(bench_tot_ret), color=colors[coloridx],fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, y_txtlocation-1, '{:.2%}'.format(bench_cagr), color=colors[coloridx],fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, y_txtlocation-2, '{:.2f}'.format(bench_sharpe), color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, y_txtlocation-3, '{:.2f}'.format(bench_sortino), color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, y_txtlocation-4, '{:.2%}'.format(bench_returns.std() * np.sqrt(252)), color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, y_txtlocation-5, '{:.2%}'.format(bench_dd_max), color=colors[coloridx], fontweight='bold', horizontalalignment='right', fontsize=8)
+            ax.text(x_txtlocation, y_txtlocation-6, '{:.0f}'.format(bench_dd_dur), color=colors[coloridx],fontweight='bold', horizontalalignment='right', fontsize=8)
 
         return ax
 
@@ -298,6 +321,8 @@ class TearsheetStatisticsMulti(Statistics):
         gs = gridspec.GridSpec(vertical_sections, 3, wspace=0.25, hspace=0.5)
 
         stats = self.get_results(self.strategy_equity)
+        statslist = [stats]
+        statslist.append(stats)
         bench_stats = None
         if self.benchmark_equity is not None:
             bench_stats = self.get_results(self.benchmark_equity)
@@ -314,7 +339,7 @@ class TearsheetStatisticsMulti(Statistics):
         self._plot_drawdown(stats, ax=ax_drawdown)
         self._plot_monthly_returns(stats, ax=ax_monthly_returns)
         self._plot_yearly_returns(stats, ax=ax_yearly_returns)
-        self._plot_txt_curve(stats, bench_stats=bench_stats, ax=ax_txt_curve)
+        self._plot_txt_curve(statslist, bench_stats=bench_stats, ax=ax_txt_curve)
         # self._plot_txt_trade(stats, ax=ax_txt_trade)
         # self._plot_txt_time(stats, ax=ax_txt_time)
 
